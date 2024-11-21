@@ -1,0 +1,24 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+    margin: 20px;
+}
+
+#canvas-container {
+    position: relative;
+    display: inline-block;
+}
+
+#imageCanvas {
+    border: 1px solid black;
+}
+
+#zoomCanvas {
+    position: absolute;
+    display: none;
+    border: 1px solid black;
+    pointer-events: none; /* Prevent interaction */
+    width: 250px;
+    height: 250px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}

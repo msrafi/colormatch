@@ -1,0 +1,7 @@
+[
+    { "name": "Red", "rgb": [255, 0, 0], "code": "R01" },
+    { "name": "Blue", "rgb": [0, 0, 255], "code": "B01" },
+    { "name": "Green", "rgb": [0, 255, 0], "code": "G01" },
+    { "name": "Yellow", "rgb": [255, 255, 0], "code": "Y01" },
+    { "name": "Black", "rgb": [0, 0, 0], "code": "BL01" }
+]
