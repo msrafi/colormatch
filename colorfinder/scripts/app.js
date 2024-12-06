@@ -1,28 +1,42 @@
-// Load color palette from external file
-import { colorPalette } from "./colorpalette.js";
+import { colorPalette } from "./colorPalette.js";
 
 const imageLoader = document.getElementById("imageLoader");
 const canvas = document.getElementById("imageCanvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
-
 const zoomCanvas = document.getElementById("zoomCanvas");
 const zoomCtx = zoomCanvas.getContext("2d", { willReadFrequently: true });
 const result = document.getElementById("result");
 
-// Adjust these for zoom effect
-const ZOOM_SCALE = 3; // Magnification scale
-const ZOOM_SIZE = 100; // Zoom canvas size (width & height)
+// Adjust zoom canvas parameters
+const ZOOM_SCALE = 3;
+const ZOOM_SIZE = 100;
 
-// Load the image onto the canvas
+// Load the image onto the canvas and resize to fit screen
 imageLoader.addEventListener("change", function (e) {
   const reader = new FileReader();
 
   reader.onload = function (event) {
     const img = new Image();
     img.onload = function () {
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+      // Resize canvas to fit the screen
+      const availableWidth = window.innerWidth;
+      const availableHeight = window.innerHeight - 100; // Exclude header
+      const aspectRatio = img.width / img.height;
+
+      if (img.width > availableWidth || img.height > availableHeight) {
+        if (img.width > img.height) {
+          canvas.width = availableWidth;
+          canvas.height = availableWidth / aspectRatio;
+        } else {
+          canvas.height = availableHeight;
+          canvas.width = availableHeight * aspectRatio;
+        }
+      } else {
+        canvas.width = img.width;
+        canvas.height = img.height;
+      }
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     };
     img.src = event.target.result;
   };
@@ -30,59 +44,19 @@ imageLoader.addEventListener("change", function (e) {
   reader.readAsDataURL(e.target.files[0]);
 });
 
-// Add zoom functionality
-// canvas.addEventListener("mousemove", function (event) {
-//   const rect = canvas.getBoundingClientRect();
-//   const mouseX = event.clientX - rect.left; // Mouse X on canvas
-//   const mouseY = event.clientY - rect.top; // Mouse Y on canvas
-
-//   console.log(mouseX, mouseY);
-
-//   // Position the zoom canvas near the cursor
-//   zoomCanvas.style.left = `${mouseX + 10}px`; // Offset to avoid overlap
-//   zoomCanvas.style.top = `${mouseY + 10}px`;
-
-//   // Display the zoom canvas
-//   zoomCanvas.style.display = "block";
-
-//   // Clear and redraw the zoom canvas
-//   zoomCtx.clearRect(0, 0, ZOOM_SIZE, ZOOM_SIZE);
-
-//   const zoomX = mouseX - ZOOM_SIZE / (2 * ZOOM_SCALE);
-//   const zoomY = mouseY - ZOOM_SIZE / (2 * ZOOM_SCALE);
-
-//   zoomCtx.drawImage(
-//     canvas,
-//     zoomX,
-//     zoomY,
-//     ZOOM_SIZE / ZOOM_SCALE,
-//     ZOOM_SIZE / ZOOM_SCALE,
-//     0,
-//     0,
-//     ZOOM_SIZE,
-//     ZOOM_SIZE
-//   );
-// });
-
-var zoomFunctions = function (event) {
-  const rect = canvas.getBoundingClientRect();
-  const mouseX = event.clientX - rect.left; // Mouse X on canvas
-  const mouseY = event.clientY - rect.top; // Mouse Y on canvas
-
-  console.log(mouseX, mouseY);
-
-  // Position the zoom canvas near the cursor
-  zoomCanvas.style.left = `${mouseX + 10}px`; // Offset to avoid overlap
-  zoomCanvas.style.top = `${mouseY + 10}px`;
-
-  // Display the zoom canvas
+// Handle zoom on both mouse and touch
+const handleZoom = (x, y) => {
+  zoomCanvas.style.left = `${x + 15}px`;
+  zoomCanvas.style.top = `${y + 15}px`;
   zoomCanvas.style.display = "block";
 
-  // Clear and redraw the zoom canvas
-  zoomCtx.clearRect(0, 0, ZOOM_SIZE, ZOOM_SIZE);
+  const rect = canvas.getBoundingClientRect();
+  const canvasX = x - rect.left;
+  const canvasY = y - rect.top;
 
-  const zoomX = mouseX - ZOOM_SIZE / (2 * ZOOM_SCALE);
-  const zoomY = mouseY - ZOOM_SIZE / (2 * ZOOM_SCALE);
+  zoomCtx.clearRect(0, 0, ZOOM_SIZE, ZOOM_SIZE);
+  const zoomX = canvasX - ZOOM_SIZE / (2 * ZOOM_SCALE);
+  const zoomY = canvasY - ZOOM_SIZE / (2 * ZOOM_SCALE);
 
   zoomCtx.drawImage(
     canvas,
@@ -97,21 +71,31 @@ var zoomFunctions = function (event) {
   );
 };
 
-canvas.addEventListener("mousemove", zoomFunctions);
-canvas.addEventListener("touchmove", zoomFunctions);
-
-// Hide the zoom canvas when the mouse leaves
-canvas.addEventListener("mouseleave", function () {
-  zoomCanvas.style.display = "none";
+// Handle mouse movement
+canvas.addEventListener("mousemove", function (event) {
+  handleZoom(event.clientX, event.clientY);
 });
 
-// Add click functionality to detect the color
-canvas.addEventListener("click", function (event) {
-  const rect = canvas.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+// Handle touch movement
+canvas.addEventListener("touchmove", function (event) {
+  const touch = event.touches[0];
+  handleZoom(touch.clientX, touch.clientY);
+});
 
-  const pixel = ctx.getImageData(x, y, 1, 1).data;
+// Hide zoom canvas on mouse leave or touch end
+const hideZoom = () => {
+  zoomCanvas.style.display = "none";
+};
+canvas.addEventListener("mouseleave", hideZoom);
+canvas.addEventListener("touchend", hideZoom);
+
+// Detect color on click or touch
+const handleColorDetection = (x, y) => {
+  const rect = canvas.getBoundingClientRect();
+  const canvasX = x - rect.left;
+  const canvasY = y - rect.top;
+
+  const pixel = ctx.getImageData(canvasX, canvasY, 1, 1).data;
   const [r, g, b] = pixel;
 
   const closestColor = findClosestColor(r, g, b);
@@ -120,6 +104,17 @@ canvas.addEventListener("click", function (event) {
   } else {
     result.textContent = "No matching thread found.";
   }
+};
+
+// Handle mouse click
+canvas.addEventListener("click", function (event) {
+  handleColorDetection(event.clientX, event.clientY);
+});
+
+// Handle touch
+canvas.addEventListener("touchstart", function (event) {
+  const touch = event.touches[0];
+  handleColorDetection(touch.clientX, touch.clientY);
 });
 
 // Find the closest color from the palette

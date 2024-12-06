@@ -11,6 +11,8 @@ body {
 
 #imageCanvas {
     border: 1px solid black;
+    max-width: 100%;
+    max-height: calc(100vh - 100px); /* Subtract header height */
 }
 
 #zoomCanvas {
@@ -18,7 +20,20 @@ body {
     display: none;
     border: 1px solid black;
     pointer-events: none; /* Prevent interaction */
-    width: 250px;
-    height: 250px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    width: 100px;
+    height: 100px;
+}
+
+/* Add crosshair box to the zoom canvas */
+#zoomCanvas::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 10px;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px solid black;
+    transform: translate(-50%, -50%);
 }
