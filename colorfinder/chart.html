@@ -7,6 +7,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
   <select id="ageSelect" onchange="updateChart()">
     <option value="54">Age 3: 54</option>
     <option value="59">Age 3: 59</option>
@@ -45,7 +46,7 @@
     const backgroundPlugin = {
       id: 'backgroundPlugin',
       beforeDatasetsDraw: (chart) => {
-        const { ctx, chartArea: { top, bottom }, scales: { x } } = chart;
+        const { ctx, chartArea: { top, bottom }, scales: { x, y } } = chart;
         const dataPoints = chart.getDatasetMeta(0).data;
 
         if (!dataPoints || dataPoints.length < 3) return;
@@ -57,10 +58,17 @@
         const age2Index = 1;
         const age3Index = 2;
 
+        // Adding $ values for Age 2 and Age 3
         ctx.font = '12px Arial';
         ctx.fillStyle = 'black';
-        ctx.fillText(`$${chart.data.datasets[0].data[age2Index].toLocaleString()}`, dataPoints[age2Index].x - 15, dataPoints[age2Index].y - 10);
-        ctx.fillText(`$${chart.data.datasets[0].data[age3Index].toLocaleString()}`, dataPoints[age3Index].x - 15, dataPoints[age3Index].y - 10);
+
+        // Get positions of Age 2 and Age 3 points
+        const age2X = dataPoints[age2Index].x;
+        const age3X = dataPoints[age3Index].x;
+
+        // Show Age2 value at a static 50px from Age1
+        ctx.fillText(`$${chart.data.datasets[0].data[age2Index].toLocaleString()}`, age2X - 15, dataPoints[age2Index].y - 10);
+        ctx.fillText(`$${chart.data.datasets[0].data[age3Index].toLocaleString()}`, age3X - 15, dataPoints[age3Index].y - 10);
 
         ctx.restore();
       }
@@ -99,10 +107,11 @@
             callback: function(value) {
               const age2 = retirementData[currentAge].ages[1];
               const age3 = retirementData[currentAge].ages[2];
-              // if (value === age2) {
-              //   return  value; // Show Age 2 label
-              // }
-              return value === value ; // Show Age 3 label
+              // Show Age 2 label statically at 50px from Age 1
+              if (value === age2) {
+                return 'Age 2: ' + value; // Static label for Age 2
+              }
+              return value === age3 ? value : ''; // Show Age 3 label
             }
           },
           min: 24,
@@ -134,7 +143,7 @@
       const age3 = chartData.ages[2];
       myChart.options.scales.x.ticks.callback = function(value) {
         if (value === age2) {
-          return  value;
+          return 'Age 2: ' + value;
         }
         return value === age3 ? value : ''; // Show only Age 3
       };
@@ -169,8 +178,6 @@
     myChart.options.scales.x.min = retirementData[currentAge].ages[0];
     myChart.options.scales.x.max = retirementData[currentAge].ages[retirementData[currentAge].ages.length - 1];
     myChart.update();
-
-    updateChart()
   </script>
 
 </body>
