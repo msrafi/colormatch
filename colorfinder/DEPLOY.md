@@ -39,12 +39,13 @@ This app is static HTML/CSS/JS. Any host that serves files over HTTPS works.
 
 ## Option D — GitHub Pages (free, uses your existing repo)
 
-1. Push this repo to GitHub (`msrafi/colormatch`).
-2. On GitHub: **Settings → Pages → Build and deployment → Source:** **GitHub Actions**.
-3. Push to `master` (or run the workflow manually under Actions).
-4. The workflow `.github/workflows/deploy-colorfinder.yml` publishes the `colorfinder` folder.
-5. Site URL: `https://msrafi.github.io/colormatch/`  
-   (username/org and repo name must match your GitHub account.)
+1. Repo must be **public** (or GitHub Pro for private Pages).
+2. Push this repo to GitHub (`msrafi/colormatch`).
+3. **Settings → Pages → Build and deployment → Source:** choose **GitHub Actions** (not “Deploy from a branch”). Save if prompted.
+4. **Actions** tab → **Deploy Color Finder** → **Run workflow** (or push to `master`).
+5. Site URL: `https://msrafi.github.io/colormatch/`
+
+**If deploy fails with `404` / “Failed to create deployment”:** Pages is not enabled — repeat step 3, then re-run the workflow.
 
 ---
 
