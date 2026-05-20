@@ -1,15 +1,42 @@
-import { colorPalette } from "./colorPalette.js";
+import { colorPalette } from "./colorpalette.js";
 
 const imageLoader = document.getElementById("imageLoader");
+const canvasContainer = document.getElementById("canvas-container");
 const canvas = document.getElementById("imageCanvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
 const zoomCanvas = document.getElementById("zoomCanvas");
 const zoomCtx = zoomCanvas.getContext("2d", { willReadFrequently: true });
 const result = document.getElementById("result");
 
-// Adjust zoom canvas parameters
 const ZOOM_SCALE = 3;
 const ZOOM_SIZE = 100;
+const ZOOM_OFFSET = 15;
+
+/** Map viewport (client) coords to canvas bitmap pixels. */
+function clientToCanvas(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  return {
+    x: (clientX - rect.left) * scaleX,
+    y: (clientY - rect.top) * scaleY,
+  };
+}
+
+/** Position zoom lens relative to canvas-container (not viewport). */
+function positionZoomLens(clientX, clientY) {
+  const containerRect = canvasContainer.getBoundingClientRect();
+  let left = clientX - containerRect.left + ZOOM_OFFSET;
+  let top = clientY - containerRect.top + ZOOM_OFFSET;
+
+  const maxLeft = containerRect.width - ZOOM_SIZE - 4;
+  const maxTop = containerRect.height - ZOOM_SIZE - 4;
+  left = Math.max(4, Math.min(left, maxLeft));
+  top = Math.max(4, Math.min(top, maxTop));
+
+  zoomCanvas.style.left = `${left}px`;
+  zoomCanvas.style.top = `${top}px`;
+}
 
 // Load the image onto the canvas and resize to fit screen
 imageLoader.addEventListener("change", function (e) {
@@ -44,26 +71,22 @@ imageLoader.addEventListener("change", function (e) {
   reader.readAsDataURL(e.target.files[0]);
 });
 
-// Handle zoom on both mouse and touch
-const handleZoom = (x, y) => {
-  zoomCanvas.style.left = `${x + 15}px`;
-  zoomCanvas.style.top = `${y + 15}px`;
+const handleZoom = (clientX, clientY) => {
+  positionZoomLens(clientX, clientY);
   zoomCanvas.style.display = "block";
 
-  const rect = canvas.getBoundingClientRect();
-  const canvasX = x - rect.left;
-  const canvasY = y - rect.top;
+  const { x: canvasX, y: canvasY } = clientToCanvas(clientX, clientY);
+  const sourceSize = ZOOM_SIZE / ZOOM_SCALE;
+  const zoomX = canvasX - sourceSize / 2;
+  const zoomY = canvasY - sourceSize / 2;
 
   zoomCtx.clearRect(0, 0, ZOOM_SIZE, ZOOM_SIZE);
-  const zoomX = canvasX - ZOOM_SIZE / (2 * ZOOM_SCALE);
-  const zoomY = canvasY - ZOOM_SIZE / (2 * ZOOM_SCALE);
-
   zoomCtx.drawImage(
     canvas,
     zoomX,
     zoomY,
-    ZOOM_SIZE / ZOOM_SCALE,
-    ZOOM_SIZE / ZOOM_SCALE,
+    sourceSize,
+    sourceSize,
     0,
     0,
     ZOOM_SIZE,
@@ -76,11 +99,15 @@ canvas.addEventListener("mousemove", function (event) {
   handleZoom(event.clientX, event.clientY);
 });
 
-// Handle touch movement
-canvas.addEventListener("touchmove", function (event) {
-  const touch = event.touches[0];
-  handleZoom(touch.clientX, touch.clientY);
-});
+canvas.addEventListener(
+  "touchmove",
+  function (event) {
+    event.preventDefault();
+    const touch = event.touches[0];
+    handleZoom(touch.clientX, touch.clientY);
+  },
+  { passive: false }
+);
 
 // Hide zoom canvas on mouse leave or touch end
 const hideZoom = () => {
@@ -89,18 +116,18 @@ const hideZoom = () => {
 canvas.addEventListener("mouseleave", hideZoom);
 canvas.addEventListener("touchend", hideZoom);
 
-// Detect color on click or touch
-const handleColorDetection = (x, y) => {
-  const rect = canvas.getBoundingClientRect();
-  const canvasX = x - rect.left;
-  const canvasY = y - rect.top;
+const handleColorDetection = (clientX, clientY) => {
+  const { x: canvasX, y: canvasY } = clientToCanvas(clientX, clientY);
+  const px = Math.min(canvas.width - 1, Math.max(0, Math.floor(canvasX)));
+  const py = Math.min(canvas.height - 1, Math.max(0, Math.floor(canvasY)));
 
-  const pixel = ctx.getImageData(canvasX, canvasY, 1, 1).data;
+  const pixel = ctx.getImageData(px, py, 1, 1).data;
   const [r, g, b] = pixel;
 
   const closestColor = findClosestColor(r, g, b);
   if (closestColor) {
-    result.textContent = `Closest Thread: ${closestColor.name} (Code: ${closestColor.code})`;
+    const [r, g, b] = closestColor.rgb;
+    result.textContent = `Closest Thread: ${closestColor.code} (RGB: ${r}, ${g}, ${b})`;
   } else {
     result.textContent = "No matching thread found.";
   }
@@ -111,11 +138,16 @@ canvas.addEventListener("click", function (event) {
   handleColorDetection(event.clientX, event.clientY);
 });
 
-// Handle touch
-canvas.addEventListener("touchstart", function (event) {
-  const touch = event.touches[0];
-  handleColorDetection(touch.clientX, touch.clientY);
-});
+canvas.addEventListener(
+  "touchstart",
+  function (event) {
+    event.preventDefault();
+    const touch = event.touches[0];
+    handleZoom(touch.clientX, touch.clientY);
+    handleColorDetection(touch.clientX, touch.clientY);
+  },
+  { passive: false }
+);
 
 // Find the closest color from the palette
 function findClosestColor(r, g, b) {

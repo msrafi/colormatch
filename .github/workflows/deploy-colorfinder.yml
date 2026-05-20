@@ -1,0 +1,36 @@
+# Deploy colorfinder/ to GitHub Pages (free).
+# Repo settings → Pages → Source: "GitHub Actions"
+name: Deploy Color Finder
+
+on:
+  push:
+    branches: [master, main]
+    paths:
+      - "colorfinder/**"
+      - ".github/workflows/deploy-colorfinder.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: colorfinder
+
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -12,7 +12,8 @@ body {
 #imageCanvas {
     border: 1px solid black;
     max-width: 100%;
-    max-height: calc(100vh - 100px); /* Subtract header height */
+    max-height: calc(100vh - 100px);
+    touch-action: none; /* keep touch coords aligned with zoom / pick */
 }
 
 #zoomCanvas {

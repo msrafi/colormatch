@@ -1,0 +1,13 @@
+# Netlify: connect repo and set "Base directory" to colorfinder, or deploy this folder directly.
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "text/javascript; charset=utf-8"
+
+[[headers]]
+  for = "/*.json"
+  [headers.values]
+    Content-Type = "application/json; charset=utf-8"
