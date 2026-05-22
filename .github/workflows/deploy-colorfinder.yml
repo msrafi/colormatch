@@ -1,17 +1,10 @@
-# Publish site root to GitHub Pages (https://msrafi.github.io/colormatch/)
+# Publish repo root → https://msrafi.github.io/colormatch/
 # Required: Settings → Pages → Source → "GitHub Actions"
 name: Deploy Color Finder
 
 on:
   push:
     branches: [master, main]
-    paths:
-      - "index.html"
-      - "scripts/**"
-      - "styles/**"
-      - "data/**"
-      - ".nojekyll"
-      - ".github/workflows/deploy-colorfinder.yml"
   workflow_dispatch:
 
 permissions:
@@ -29,10 +22,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare site bundle
+        run: |
+          mkdir -p _site
+          cp index.html .nojekyll _site/
+          cp -r scripts styles data _site/
+          # Optional: keep /colorfinder/ URL working
+          mkdir -p _site/colorfinder
+          cp colorfinder/index.html _site/colorfinder/
+
       - name: Upload site artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
   deploy:
     runs-on: ubuntu-latest

@@ -18,7 +18,16 @@ Static app at repo root (`index.html`, `scripts/`, `styles/`, `data/`).
 
 ## Local test
 
+Run the server from the **repository root** (where `index.html` is), not from `colorfinder/`:
+
 ```bash
-python3 -m http.server 8080
-# open http://localhost:8080
+cd /path/to/colormatch
+npm start
+# or: python3 -m http.server 8080
 ```
+
+Open **http://localhost:8080** in the browser.
+
+Do **not** open `index.html` as a `file://` URL — ES modules require HTTP.
+
+If your IDE workspace is the `colorfinder/` subfolder, use `npm start` there (it starts the server from the parent repo).

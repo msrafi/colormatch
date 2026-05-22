@@ -1,0 +1,9 @@
+{
+  "name": "colormatch-colorfinder",
+  "private": true,
+  "description": "Color Finder — thread color matching from photos",
+  "scripts": {
+    "start": "python3 -m http.server 8080",
+    "start:alt": "python3 -m http.server 8765"
+  }
+}
