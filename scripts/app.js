@@ -58,8 +58,16 @@ function clientToCanvas(clientX, clientY) {
 
 function positionZoomLens(clientX, clientY) {
   const containerRect = canvasContainer.getBoundingClientRect();
-  let left = clientX - containerRect.left + ZOOM_OFFSET;
-  let top = clientY - containerRect.top + ZOOM_OFFSET;
+  const relX = clientX - containerRect.left;
+  const relY = clientY - containerRect.top;
+
+  let left = relX - ZOOM_SIZE / 2;
+  let top = relY - ZOOM_SIZE - ZOOM_OFFSET;
+
+  // Not enough room above — show below the pointer
+  if (top < 4) {
+    top = relY + ZOOM_OFFSET;
+  }
 
   const maxLeft = containerRect.width - ZOOM_SIZE - 4;
   const maxTop = containerRect.height - ZOOM_SIZE - 4;
