@@ -2,18 +2,58 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Color Finder</title>
     <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
-    <h1>Color Finder</h1>
-    <input type="file" id="imageLoader" accept="image/*">
-    <div id="canvas-container">
-        <canvas id="imageCanvas"></canvas>
-        <canvas id="zoomCanvas" width="100" height="100"></canvas>
-    </div>
-    <p id="result"></p>
+    <header class="app-header">
+        <h1>Color Finder</h1>
+        <label class="file-picker">
+            <span class="file-picker__label">Choose photo</span>
+            <input type="file" id="imageLoader" accept="image/*" capture="environment">
+        </label>
+    </header>
+
+    <main class="app-main">
+        <div id="canvas-container">
+            <canvas id="imageCanvas"></canvas>
+            <div id="corner-overlay" class="corner-overlay hidden" aria-live="polite">
+                <span class="corner-label corner-tl" id="cornerTL">—</span>
+                <span class="corner-label corner-tr" id="cornerTR">—</span>
+                <span class="corner-label corner-bl" id="cornerBL">—</span>
+                <span class="corner-label corner-br" id="cornerBR">—</span>
+            </div>
+            <div id="zoom-lens" class="zoom-lens hidden">
+                <canvas id="zoomCanvas" width="100" height="100"></canvas>
+                <div class="zoom-reticle" aria-hidden="true">
+                    <span class="zoom-reticle__hline"></span>
+                    <span class="zoom-reticle__vline"></span>
+                    <span class="zoom-reticle__box"></span>
+                </div>
+            </div>
+        </div>
+
+        <div id="live-preview" class="live-preview hidden">
+            <div class="live-preview__item">
+                <div class="live-preview__swatch" id="pickedSwatch" title="Color under finger"></div>
+                <div class="live-preview__meta">
+                    <span class="live-preview__title">Picked</span>
+                    <span class="live-preview__rgb" id="pickedRgb">—</span>
+                </div>
+            </div>
+            <div class="live-preview__item">
+                <div class="live-preview__swatch" id="matchedSwatch" title="Closest thread"></div>
+                <div class="live-preview__meta">
+                    <span class="live-preview__title">Thread</span>
+                    <span class="live-preview__rgb" id="matchedRgb">—</span>
+                </div>
+            </div>
+        </div>
+
+        <p id="result" class="result"></p>
+    </main>
+
     <script type="module" src="scripts/app.js"></script>
 </body>
 </html>

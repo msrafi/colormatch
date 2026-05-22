@@ -1,18 +1,51 @@
 import { colorPalette } from "./colorpalette.js";
 
 const imageLoader = document.getElementById("imageLoader");
+const filePickerLabel = document.querySelector(".file-picker__label");
+const appHeader = document.querySelector(".app-header");
+const appMain = document.querySelector(".app-main");
 const canvasContainer = document.getElementById("canvas-container");
 const canvas = document.getElementById("imageCanvas");
 const ctx = canvas.getContext("2d", { willReadFrequently: true });
+const zoomLens = document.getElementById("zoom-lens");
 const zoomCanvas = document.getElementById("zoomCanvas");
 const zoomCtx = zoomCanvas.getContext("2d", { willReadFrequently: true });
+const cornerOverlay = document.getElementById("corner-overlay");
+const cornerEls = [
+  document.getElementById("cornerTL"),
+  document.getElementById("cornerTR"),
+  document.getElementById("cornerBL"),
+  document.getElementById("cornerBR"),
+];
+const livePreview = document.getElementById("live-preview");
+const pickedSwatch = document.getElementById("pickedSwatch");
+const matchedSwatch = document.getElementById("matchedSwatch");
+const pickedRgbEl = document.getElementById("pickedRgb");
+const matchedRgbEl = document.getElementById("matchedRgb");
 const result = document.getElementById("result");
 
 const ZOOM_SCALE = 3;
 const ZOOM_SIZE = 100;
 const ZOOM_OFFSET = 15;
 
-/** Map viewport (client) coords to canvas bitmap pixels. */
+let hasImage = false;
+let loadedImageSrc = null;
+
+function getBottomPanelHeight() {
+  if (livePreview.classList.contains("hidden")) return 0;
+  const resultHeight = result.textContent ? result.offsetHeight + 6 : 0;
+  return livePreview.offsetHeight + resultHeight + 8;
+}
+
+function getAvailableSize() {
+  const main = appMain.getBoundingClientRect();
+  const padding = 4;
+  return {
+    width: main.width - padding,
+    height: main.height - getBottomPanelHeight() - padding,
+  };
+}
+
 function clientToCanvas(clientX, clientY) {
   const rect = canvas.getBoundingClientRect();
   const scaleX = canvas.width / rect.width;
@@ -23,7 +56,6 @@ function clientToCanvas(clientX, clientY) {
   };
 }
 
-/** Position zoom lens relative to canvas-container (not viewport). */
 function positionZoomLens(clientX, clientY) {
   const containerRect = canvasContainer.getBoundingClientRect();
   let left = clientX - containerRect.left + ZOOM_OFFSET;
@@ -34,46 +66,42 @@ function positionZoomLens(clientX, clientY) {
   left = Math.max(4, Math.min(left, maxLeft));
   top = Math.max(4, Math.min(top, maxTop));
 
-  zoomCanvas.style.left = `${left}px`;
-  zoomCanvas.style.top = `${top}px`;
+  zoomLens.style.left = `${left}px`;
+  zoomLens.style.top = `${top}px`;
 }
 
-// Load the image onto the canvas and resize to fit screen
-imageLoader.addEventListener("change", function (e) {
-  const reader = new FileReader();
+function setCornerCodes(code) {
+  const text = code || "—";
+  for (const el of cornerEls) {
+    el.textContent = text;
+  }
+}
 
-  reader.onload = function (event) {
-    const img = new Image();
-    img.onload = function () {
-      // Resize canvas to fit the screen
-      const availableWidth = window.innerWidth;
-      const availableHeight = window.innerHeight - 100; // Exclude header
-      const aspectRatio = img.width / img.height;
+function setSwatch(el, rgb) {
+  const [r, g, b] = rgb;
+  el.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+}
 
-      if (img.width > availableWidth || img.height > availableHeight) {
-        if (img.width > img.height) {
-          canvas.width = availableWidth;
-          canvas.height = availableWidth / aspectRatio;
-        } else {
-          canvas.height = availableHeight;
-          canvas.width = availableHeight * aspectRatio;
-        }
-      } else {
-        canvas.width = img.width;
-        canvas.height = img.height;
-      }
+function formatRgb(rgb) {
+  const [r, g, b] = rgb;
+  return `${r}, ${g}, ${b}`;
+}
 
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-    };
-    img.src = event.target.result;
-  };
+function showPickUi(show) {
+  cornerOverlay.classList.toggle("hidden", !show);
+  livePreview.classList.toggle("hidden", !show);
+}
 
-  reader.readAsDataURL(e.target.files[0]);
-});
+function refitImage() {
+  if (!hasImage || !loadedImageSrc) return;
+  const img = new Image();
+  img.onload = () => requestAnimationFrame(() => fitImageToScreen(img));
+  img.src = loadedImageSrc;
+}
 
-const handleZoom = (clientX, clientY) => {
+function handleZoom(clientX, clientY) {
   positionZoomLens(clientX, clientY);
-  zoomCanvas.style.display = "block";
+  zoomLens.classList.remove("hidden");
 
   const { x: canvasX, y: canvasY } = clientToCanvas(clientX, clientY);
   const sourceSize = ZOOM_SIZE / ZOOM_SCALE;
@@ -92,64 +120,125 @@ const handleZoom = (clientX, clientY) => {
     ZOOM_SIZE,
     ZOOM_SIZE
   );
-};
+}
 
-// Handle mouse movement
-canvas.addEventListener("mousemove", function (event) {
-  handleZoom(event.clientX, event.clientY);
-});
+function hideZoom() {
+  zoomLens.classList.add("hidden");
+}
 
-canvas.addEventListener(
-  "touchmove",
-  function (event) {
-    event.preventDefault();
-    const touch = event.touches[0];
-    handleZoom(touch.clientX, touch.clientY);
-  },
-  { passive: false }
-);
+function updateAtPoint(clientX, clientY) {
+  if (!hasImage) return;
 
-// Hide zoom canvas on mouse leave or touch end
-const hideZoom = () => {
-  zoomCanvas.style.display = "none";
-};
-canvas.addEventListener("mouseleave", hideZoom);
-canvas.addEventListener("touchend", hideZoom);
+  handleZoom(clientX, clientY);
 
-const handleColorDetection = (clientX, clientY) => {
   const { x: canvasX, y: canvasY } = clientToCanvas(clientX, clientY);
   const px = Math.min(canvas.width - 1, Math.max(0, Math.floor(canvasX)));
   const py = Math.min(canvas.height - 1, Math.max(0, Math.floor(canvasY)));
 
   const pixel = ctx.getImageData(px, py, 1, 1).data;
-  const [r, g, b] = pixel;
+  const pickedRgb = [pixel[0], pixel[1], pixel[2]];
+  const wasHidden = livePreview.classList.contains("hidden");
 
-  const closestColor = findClosestColor(r, g, b);
-  if (closestColor) {
-    const [r, g, b] = closestColor.rgb;
-    result.textContent = `Closest Thread: ${closestColor.code} (RGB: ${r}, ${g}, ${b})`;
+  setSwatch(pickedSwatch, pickedRgb);
+  pickedRgbEl.textContent = formatRgb(pickedRgb);
+
+  const closest = findClosestColor(...pickedRgb);
+  if (closest) {
+    setCornerCodes(closest.code);
+    setSwatch(matchedSwatch, closest.rgb);
+    matchedRgbEl.textContent = `${closest.code} · ${formatRgb(closest.rgb)}`;
+    result.textContent = `Closest thread: ${closest.code}`;
   } else {
+    setCornerCodes("—");
+    matchedSwatch.style.backgroundColor = "#e4e4e7";
+    matchedRgbEl.textContent = "No match";
     result.textContent = "No matching thread found.";
   }
-};
 
-// Handle mouse click
-canvas.addEventListener("click", function (event) {
-  handleColorDetection(event.clientX, event.clientY);
+  showPickUi(true);
+  if (wasHidden) refitImage();
+}
+
+function fitImageToScreen(img) {
+  const { width: availableWidth, height: availableHeight } = getAvailableSize();
+  const aspectRatio = img.width / img.height;
+
+  if (img.width > availableWidth || img.height > availableHeight) {
+    if (img.width / availableWidth > img.height / availableHeight) {
+      canvas.width = availableWidth;
+      canvas.height = availableWidth / aspectRatio;
+    } else {
+      canvas.height = availableHeight;
+      canvas.width = availableHeight * aspectRatio;
+    }
+  } else {
+    canvas.width = img.width;
+    canvas.height = img.height;
+  }
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+}
+
+imageLoader.addEventListener("change", function (e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (event) {
+    const img = new Image();
+    img.onload = function () {
+      loadedImageSrc = event.target.result;
+      hasImage = true;
+      filePickerLabel.textContent = file.name.replace(/.*\//, "").slice(0, 28);
+      setCornerCodes("—");
+      pickedRgbEl.textContent = "—";
+      matchedRgbEl.textContent = "—";
+      pickedSwatch.style.backgroundColor = "#e4e4e7";
+      matchedSwatch.style.backgroundColor = "#e4e4e7";
+      result.textContent = "Touch and drag on the image";
+      cornerOverlay.classList.add("hidden");
+      livePreview.classList.remove("hidden");
+      requestAnimationFrame(() => fitImageToScreen(img));
+    };
+    img.src = event.target.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+window.addEventListener("resize", refitImage);
+
+canvas.addEventListener("mousemove", (event) => {
+  updateAtPoint(event.clientX, event.clientY);
 });
 
 canvas.addEventListener(
-  "touchstart",
-  function (event) {
+  "touchmove",
+  (event) => {
     event.preventDefault();
     const touch = event.touches[0];
-    handleZoom(touch.clientX, touch.clientY);
-    handleColorDetection(touch.clientX, touch.clientY);
+    updateAtPoint(touch.clientX, touch.clientY);
   },
   { passive: false }
 );
 
-// Find the closest color from the palette
+canvas.addEventListener(
+  "touchstart",
+  (event) => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    updateAtPoint(touch.clientX, touch.clientY);
+  },
+  { passive: false }
+);
+
+canvas.addEventListener("mouseleave", hideZoom);
+canvas.addEventListener("touchend", hideZoom);
+canvas.addEventListener("touchcancel", hideZoom);
+
+canvas.addEventListener("click", (event) => {
+  updateAtPoint(event.clientX, event.clientY);
+});
+
 function findClosestColor(r, g, b) {
   let minDistance = Infinity;
   let closest = null;

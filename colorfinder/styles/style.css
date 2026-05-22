@@ -1,40 +1,311 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #f4f4f5;
+    --surface: #ffffff;
+    --text: #18181b;
+    --muted: #71717a;
+    --accent: #2563eb;
+    --accent-pressed: #1d4ed8;
+    --overlay-bg: rgba(0, 0, 0, 0.82);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
-    font-family: Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    margin: 0;
+    padding: var(--safe-top) var(--safe-right) var(--safe-bottom) var(--safe-left);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    flex-shrink: 0;
     text-align: center;
-    margin: 20px;
+    padding: 8px 12px 6px;
+}
+
+.app-header h1 {
+    margin: 0 0 6px;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+
+/* Mobile-friendly file input */
+.file-picker {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    cursor: pointer;
+}
+
+.file-picker input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.file-picker__label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 8px 14px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.file-picker:active .file-picker__label {
+    background: var(--accent-pressed);
+    transform: scale(0.98);
+}
+
+.app-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 0 8px 8px;
+    min-height: 0;
+    overflow: hidden;
 }
 
 #canvas-container {
     position: relative;
-    display: inline-block;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 0;
+    width: 100%;
+    line-height: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
 }
 
 #imageCanvas {
-    border: 1px solid black;
+    display: block;
     max-width: 100%;
-    max-height: calc(100vh - 100px);
-    touch-action: none; /* keep touch coords aligned with zoom / pick */
+    max-height: 100%;
+    touch-action: none;
+    vertical-align: top;
+}
+
+/* Thread code in all four corners */
+.corner-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.corner-overlay.hidden {
+    display: none;
+}
+
+.corner-label {
+    position: absolute;
+    max-width: 42%;
+    padding: 6px 10px;
+    background: var(--overlay-bg);
+    color: #fff;
+    font-size: clamp(0.7rem, 2.8vw, 0.85rem);
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.02em;
+    border-radius: 6px;
+    text-align: center;
+    word-break: break-word;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+.corner-tl {
+    top: 8px;
+    left: 8px;
+}
+
+.corner-tr {
+    top: 8px;
+    right: 8px;
+}
+
+.corner-bl {
+    bottom: 8px;
+    left: 8px;
+}
+
+.corner-br {
+    bottom: 8px;
+    right: 8px;
+}
+
+.zoom-lens {
+    position: absolute;
+    width: 100px;
+    height: 100px;
+    z-index: 3;
+    pointer-events: none;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+    border: 2px solid #fff;
+}
+
+.zoom-lens.hidden {
+    display: none;
 }
 
 #zoomCanvas {
-    position: absolute;
-    display: none;
-    border: 1px solid black;
-    pointer-events: none; /* Prevent interaction */
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    width: 100px;
-    height: 100px;
+    display: block;
+    width: 100%;
+    height: 100%;
 }
 
-/* Add crosshair box to the zoom canvas */
-#zoomCanvas::after {
-    content: '';
+/* Center reticle — marks the exact sampled pixel */
+.zoom-reticle {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.zoom-reticle__hline,
+.zoom-reticle__vline {
+    position: absolute;
+    background: #fff;
+    box-shadow: 0 0 2px rgba(0, 0, 0, 0.9);
+}
+
+.zoom-reticle__hline {
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 1px;
+    transform: translateY(-50%);
+}
+
+.zoom-reticle__vline {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    transform: translateX(-50%);
+}
+
+.zoom-reticle__box {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 10px;
-    height: 10px;
-    background: rgba(255, 255, 255, 0.5);
-    border: 1px solid black;
+    width: 14px;
+    height: 14px;
     transform: translate(-50%, -50%);
+    border: 2px solid #fff;
+    outline: 1px solid #000;
+    box-shadow: 0 0 4px rgba(0, 0, 0, 0.6);
+    background: transparent;
+}
+
+.live-preview {
+    flex-shrink: 0;
+    display: flex;
+    width: 100%;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 10px;
+    background: var(--surface);
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+}
+
+.live-preview.hidden {
+    display: none;
+}
+
+.live-preview__item {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.live-preview__swatch {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    border: 2px solid rgba(0, 0, 0, 0.12);
+    background: #e4e4e7;
+}
+
+.live-preview__meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    min-width: 0;
+}
+
+.live-preview__title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.live-preview__rgb {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--text);
+    word-break: break-all;
+}
+
+.result {
+    flex-shrink: 0;
+    margin: 6px 0 0;
+    padding: 0 4px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
+}
+
+.result:empty {
+    display: none;
+}
+
+@media (min-width: 480px) {
+    .app-header h1 {
+        font-size: 1.5rem;
+    }
+
+    .corner-label {
+        font-size: 0.85rem;
+        padding: 8px 12px;
+    }
 }
