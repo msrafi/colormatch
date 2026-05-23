@@ -118,7 +118,7 @@ body {
     vertical-align: top;
 }
 
-/* Thread code in all four corners */
+/* Top-right: five closest thread codes */
 .corner-overlay {
     position: absolute;
     inset: 0;
@@ -130,40 +130,31 @@ body {
     display: none;
 }
 
-.corner-label {
+.closest-panel {
     position: absolute;
+    top: 8px;
+    right: 8px;
     max-width: 42%;
+    margin: 0;
     padding: 6px 10px;
+    list-style: none;
     background: var(--overlay-bg);
     color: #fff;
     font-size: clamp(0.7rem, 2.8vw, 0.85rem);
     font-weight: 700;
-    line-height: 1.2;
+    line-height: 1.35;
     letter-spacing: 0.02em;
     border-radius: 6px;
-    text-align: center;
-    word-break: break-word;
+    text-align: right;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
-.corner-tl {
-    top: 8px;
-    left: 8px;
+.closest-panel li {
+    padding: 2px 0;
 }
 
-.corner-tr {
-    top: 8px;
-    right: 8px;
-}
-
-.corner-bl {
-    bottom: 8px;
-    left: 8px;
-}
-
-.corner-br {
-    bottom: 8px;
-    right: 8px;
+.closest-panel li:first-child {
+    color: #fde047;
 }
 
 .zoom-lens {
@@ -304,7 +295,7 @@ body {
         font-size: 1.5rem;
     }
 
-    .corner-label {
+    .closest-panel {
         font-size: 0.85rem;
         padding: 8px 12px;
     }

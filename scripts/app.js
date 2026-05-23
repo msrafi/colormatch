@@ -11,12 +11,8 @@ const zoomLens = document.getElementById("zoom-lens");
 const zoomCanvas = document.getElementById("zoomCanvas");
 const zoomCtx = zoomCanvas.getContext("2d", { willReadFrequently: true });
 const cornerOverlay = document.getElementById("corner-overlay");
-const cornerEls = [
-  document.getElementById("cornerTL"),
-  document.getElementById("cornerTR"),
-  document.getElementById("cornerBL"),
-  document.getElementById("cornerBR"),
-];
+const closestList = document.getElementById("closestList");
+const CLOSEST_COUNT = 5;
 const livePreview = document.getElementById("live-preview");
 const pickedSwatch = document.getElementById("pickedSwatch");
 const matchedSwatch = document.getElementById("matchedSwatch");
@@ -78,10 +74,18 @@ function positionZoomLens(clientX, clientY) {
   zoomLens.style.top = `${top}px`;
 }
 
-function setCornerCodes(code) {
-  const text = code || "—";
-  for (const el of cornerEls) {
-    el.textContent = text;
+function setClosestList(matches) {
+  closestList.replaceChildren();
+  if (!matches?.length) {
+    const li = document.createElement("li");
+    li.textContent = "—";
+    closestList.appendChild(li);
+    return;
+  }
+  for (const { code } of matches) {
+    const li = document.createElement("li");
+    li.textContent = code;
+    closestList.appendChild(li);
   }
 }
 
@@ -150,14 +154,15 @@ function updateAtPoint(clientX, clientY) {
   setSwatch(pickedSwatch, pickedRgb);
   pickedRgbEl.textContent = formatRgb(pickedRgb);
 
-  const closest = findClosestColor(...pickedRgb);
+  const closestMatches = findClosestColors(...pickedRgb, CLOSEST_COUNT);
+  const closest = closestMatches[0];
   if (closest) {
-    setCornerCodes(closest.code);
+    setClosestList(closestMatches);
     setSwatch(matchedSwatch, closest.rgb);
     matchedRgbEl.textContent = `${closest.code} · ${formatRgb(closest.rgb)}`;
     result.textContent = `Closest thread: ${closest.code}`;
   } else {
-    setCornerCodes("—");
+    setClosestList([]);
     matchedSwatch.style.backgroundColor = "#e4e4e7";
     matchedRgbEl.textContent = "No match";
     result.textContent = "No matching thread found.";
@@ -198,7 +203,7 @@ imageLoader.addEventListener("change", function (e) {
       loadedImageSrc = event.target.result;
       hasImage = true;
       filePickerLabel.textContent = file.name.replace(/.*\//, "").slice(0, 28);
-      setCornerCodes("—");
+      setClosestList([]);
       pickedRgbEl.textContent = "—";
       matchedRgbEl.textContent = "—";
       pickedSwatch.style.backgroundColor = "#e4e4e7";
@@ -247,19 +252,14 @@ canvas.addEventListener("click", (event) => {
   updateAtPoint(event.clientX, event.clientY);
 });
 
-function findClosestColor(r, g, b) {
-  let minDistance = Infinity;
-  let closest = null;
+function colorDistance(r, g, b, [cr, cg, cb]) {
+  return Math.sqrt((r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2);
+}
 
-  for (const color of colorPalette) {
-    const [cr, cg, cb] = color.rgb;
-    const distance = Math.sqrt((r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2);
-
-    if (distance < minDistance) {
-      minDistance = distance;
-      closest = color;
-    }
-  }
-
-  return closest;
+function findClosestColors(r, g, b, count = CLOSEST_COUNT) {
+  return colorPalette
+    .map((color) => ({ color, distance: colorDistance(r, g, b, color.rgb) }))
+    .sort((a, b) => a.distance - b.distance)
+    .slice(0, count)
+    .map(({ color }) => color);
 }
